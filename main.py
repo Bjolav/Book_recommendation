@@ -34,6 +34,11 @@ def csv_lifter():
     csv_data['publisher;;;'] = csv_data['publisher;;;'].str.strip(';')
     csv_data = csv_data.rename({'publisher;;;': 'publisher'}, axis=1)
 
+    # Bøker som ikke er del av serie får det etablert
+    csv_data['series'] = csv_data['series'].fillna("Standalone")
+    csv_data['book_number'] = csv_data['book_number'].fillna("1")
+
+
 
 def main():
     g = Graph()
@@ -47,20 +52,23 @@ def main():
 
     csv_data = pd.read_csv("books.csv", error_bad_lines=False, encoding="utf-8")
 
-    # csv_data = csv_data.fillna("unknown")
+    csv_data = csv_data.fillna("unknown")
 
     for index, row in csv_data.iterrows():
         subject = row['title']
+        g.add((URIRef(schema + subject), RDF.type, OWL.DatatypeProperty))
 
-        g.add((URIRef(schema + subject), RDF.type, URIRef(schema + "identifier"), Literal(row["bookID"])))
-        g.add((URIRef(schema + subject), URIRef(schema + "author"), URIRef(schema + row["authors"])))
+        g.add((URIRef(schema + subject), RDF.type, OWL.QualifiedCardinality, URIRef(schema + "identifier"), Literal(row["bookID"])))
+        g.add((URIRef(schema + subject), RDF.type, OWL.ObjectProperty, URIRef(schema + "author"), URIRef(schema + row["authors"])))
         g.add((URIRef(schema + subject), RDF.type, OWL.onProperty, URIRef(schema + "aggregateRating"), Literal(row["average_rating"])))
-        g.add((URIRef(schema + subject), URIRef(schema + "inLanguage"), URIRef(schema + row["language_code"])))
-        g.add((URIRef(schema + subject), URIRef(schema + "numberOfPages"), Literal(row["num_pages"])))
-        g.add((URIRef(schema + subject), URIRef(schema + "datePublished"), Literal(row["publication_date"])))
-        g.add((URIRef(schema + subject), URIRef(schema + "publisher"), URIRef(schema + row["publisher"])))
+        g.add((URIRef(schema + subject), RDF.type, OWL.hasValue, URIRef(schema + "inLanguage"), URIRef(schema + row["language_code"])))
+        g.add((URIRef(schema + subject), RDF.type, OWL.maxCardinality, URIRef(schema + "numberOfPages"), Literal(row["num_pages"])))
+        g.add((URIRef(schema + subject), RDF.type, OWL.hasTime, URIRef(schema + "datePublished"), Literal(row["publication_date"])))
+        g.add((URIRef(schema + subject), RDF.type, OWL.ObjectProperty, URIRef(schema + "publisher"), URIRef(schema + row["publisher"])))
+        g.add((URIRef(schema + subject), RDF.type, OWL.subClassOf, URIRef(schema + "partOfSeries"), URIRef(schema + row["series"])))
+        g.add((URIRef(schema + subject), RDF.type, OWL.QualifiedCardinality, URIRef(schema + "position"), URIRef(schema + row["book_number"])))
 
 
-    g.remove((None, None, URIRef("hhtps://schema.org/")))
+    g.remove((None, None, URIRef("hhtps://schema.org/unknown")))
 
     print(g.serialize(format="turtle").decode())
