@@ -1,0 +1,68 @@
+<Button>:
+    font_size:40
+    color:0.3,0.6,0.7,1
+    size_hint: 0.9, 0.9
+
+<Menu>:
+
+    btn: btn
+    book: book
+    author: author
+
+    GridLayout:
+        cols:3
+        Button:
+            id: btn
+            pos_hint: {"y":0.7}
+            size_hint: 0.5,  0.5
+            text: "Get random book" if btn.state == "normal" else "Confirmed"
+            background_color: 0.3,0.4,0.5,1
+            on_release: root.btn()
+
+        GridLayout:
+            cols:2
+            TextInput:
+                id: book
+                multiline:False
+            Button:
+                id: btn2
+                pos_hint: {"y":0.7}
+                text: "Search for book" if btn.state == "normal" else "Confirmed"
+                background_color: 0.3,0.4,0.5,1
+                on_release: root.btn2()
+        GridLayout:
+            cols:2
+            TextInput:
+                id: author
+                multiline:False
+            Button:
+                id: btn3
+                pos_hint: {"y":0.7}
+                text: "Search for author" if btn.state == "normal" else "Confirmed"
+                background_color: 0.3,0.4,0.5,1
+                on_release: root.btn3()
+
+
+<Randomized>:
+
+    viewclass: 'SelectableLabel'
+    SelectableRecycleBoxLayout:
+        size_hint_y: None
+        height: self.minimum_height
+        orientation: 'vertical'
+
+<BookSearch>:
+
+    viewclass: 'SelectableLabel'
+    SelectableRecycleBoxLayout:
+        size_hint_y: None
+        height: self.minimum_height
+        orientation: 'vertical'
+
+<AuthorSearch>:
+
+    viewclass: 'SelectableLabel'
+    SelectableRecycleBoxLayout:
+        size_hint_y: None
+        height: self.minimum_height
+        orientation: 'vertical'
