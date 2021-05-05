@@ -3,7 +3,7 @@ from rdflib.namespace import RDF, RDFS, OWL, XSD
 import pandas as pd
 
 
-def csv_lifter():
+def csv_loader():
     # her leses csv-filen
     csv_data = pd.read_csv("books.csv", error_bad_lines=False, encoding="utf-8")
 
@@ -37,9 +37,12 @@ def csv_lifter():
     # Bøker som ikke er del av serie får det etablert
     csv_data['series'] = csv_data['series'].fillna("Standalone")
 
+    return csv_data
+
 
 
 def main():
+    csv_loader()
     g = Graph()
     g.parse("https://www.wikidata.org/wiki/Q571", format="xml")
     schema = Namespace("https://schema.org/")
@@ -55,18 +58,12 @@ def main():
     csv_data = csv_data.fillna("unknown")
 
     for index, row in csv_data.iterrows():
+        # Books registered as standalone get assigned the value "1" as it's the one and only book in it's series
         if row["series"] == "Standalone":
             row["book_number"] = "1"
 
         subject = row['title']
         g.add((URIRef(schema + subject), RDF.type, OWL.DatatypeProperty))
-        g.add((URIRef(schema + subject), OWL.hasValue, Literal(row["isbn13"])))
-        g.add((URIRef(schema + subject), OWL.onProperty, URIRef(schema + row["authors"])))
-        g.add((URIRef(schema + subject), OWL.hasValue, Literal(row["average_rating"])))
-        g.add((URIRef(schema + subject), OWL.hasValue, Literal(schema, lang=row["language_code"])))
-        g.add((URIRef(schema + subject), OWL.hasValue, Literal(row["num_pages"], datatype=XSD.int)))
-        g.add((URIRef(schema + subject), OWL.hasValue, Literal(row["publication_date"], datatype=XSD["date"])))
-        g.add((URIRef(schema + subject), OWL.hasValue, Literal(row["isbn13"])))
 
         g.add((URIRef(schema + subject), URIRef(schema + "identifier"), Literal(row["isbn13"], datatype=XSD.int)))
         g.add((URIRef(schema + subject), URIRef(schema + "author"), URIRef(schema + row["authors"], datatype=XSD.string)))
@@ -84,4 +81,5 @@ def main():
 
     g.remove((None, None, URIRef("hhtps://schema.org/unknown")))
 
-    print(g.serialize(format="turtle").decode("utf-8"))
+    #print(g.serialize(format="turtle").decode("utf-8"))
+    g.serialize(destination='output.owl', format='turtle')
