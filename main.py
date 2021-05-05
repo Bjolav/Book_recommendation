@@ -4,29 +4,30 @@ import pandas as pd
 
 
 def csv_loader():
-    # her leses csv-filen
+    # CSV file gets read
     csv_data = pd.read_csv("books.csv", error_bad_lines=False, encoding="utf-8")
 
-    # her slettes kolonnene vi ikke skal ha med
+    # Deletion of all rows we deem unnecessary
     del csv_data['bookID']
     del csv_data['isbn']
     del csv_data['ratings_count']
     del csv_data['text_reviews_count']
 
-    # her endrer man alle mellomrom med understrek for å gjøre det lettere å gjøre om til tripler senere
+    # Here we change all empty spaces with underscore to make it easier for triple-convertion later
     csv_data = csv_data.replace(' ', '_', regex=True)
 
-    # her slettes alle radene som har tomme verdier
+    # Here we remove all rows with empty values
     csv_data = csv_data.dropna()
 
-    # her fjerner man alle rader der sidetall = 0
+    # Here we remove all rows where the book's page number equals 0
     csv_data = csv_data[csv_data.num_pages != 0]
 
-    # legger til nye kolonner der man får informasjon om hvilken serie boken tilhører, og hvilken nummer i rekken den er
+    # Adds new columns for what series the book is part of, as well as it's positional number in that series,
+    # extrapolated from titles that include it
     csv_data[['title', 'series']] = csv_data['title'].str.split('(', 1, expand=True)
     csv_data[['series', 'book_number']] = csv_data['series'].str.split('#', 1, expand=True)
 
-    # rydder opp i radene, slik at enkelte tegn på slutten av verdiene fjernes
+    # Cleans up the rows
     csv_data['book_number'] = csv_data['book_number'].str.strip(')')
     csv_data['title'] = csv_data['title'].str.strip('_')
     csv_data['series'] = csv_data['series'].str.strip('_')
@@ -34,7 +35,7 @@ def csv_loader():
     csv_data['publisher;;;'] = csv_data['publisher;;;'].str.strip(';')
     csv_data = csv_data.rename({'publisher;;;': 'publisher'}, axis=1)
 
-    # Bøker som ikke er del av serie får det etablert
+    # Books that aren't part of a series gets that established
     csv_data['series'] = csv_data['series'].fillna("Standalone")
 
     return csv_data
