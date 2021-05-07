@@ -2,8 +2,6 @@ import pandas as pd
 import random
 from rdflib import Graph, Literal, Namespace, URIRef
 from rdflib.namespace import RDF, RDFS, OWL, XSD
-import pandas as pd
-from rdflib.namespace import RDF, RDFS, OWL
 from kivy.app import App
 from kivy.uix.label import Label
 from kivy.uix.gridlayout import GridLayout
@@ -16,52 +14,65 @@ from kivy.properties import ObjectProperty
 from kivy.uix.popup import Popup
 from SPARQLWrapper import SPARQLWrapper, JSON
 
+# Loads in the my.kv which provides all customized GUI elements for the code to utilize
 kv = Builder.load_file("my.kv")
 
 
+# The main window that opens when the code runs, which declares variables for each functionality in the application
+# in addition to declaring functions for each button to execute once the user interacts with the program
 class Menu(FloatLayout):
     btn = ObjectProperty(None)
     book = ObjectProperty(None)
     author = ObjectProperty(None)
 
+    # Method that executes once the button for receiving a random book gets pressed
     def btn(self):
         show_popup(Randomized())
 
+    # Method that executes once the button that searches for books gets pressed
     def btn2(self):
         show_popup(BookSearch)
 
+    # Method that executes once the button that searches for authors gets pressed
     def btn3(self):
         show_popup(AuthorSearch)
 
 
+#  GUI for the window that opens up once the user presses on the button for receiving a random book
 class Randomized(FloatLayout):
     def __init__(self, **kwargs):
         super(Randomized, self).__init__(**kwargs)
         self.data = [{"text": str(random_book(csv_loader()))}]
 
 
+# GUI for the window that opens up once the user presses on the button submitting their search result for books
 class BookSearch(RecycleView, Menu):
     def __init(self, **kwargs):
         super(BookSearch, self).__init__(**kwargs)
         self.data = [{"text": str(x) for x in range(book_search(csv_loader(), Menu.book))}]
 
 
+# GUI for the window that opens up once the user presses on the button submitting their search result for authors
 class AuthorSearch(RecycleView, Menu):
     def __init(self, **kwargs):
         super(AuthorSearch, self).__init__(**kwargs)
         self.data = [{"text": str(x) for x in range(author_search(csv_loader(), Menu.author))}]
 
 
+# Main class that runs once the program runs, which calls for the Menu class that the user gets introduced to
 class MyApp(App):
     def build(self):
         return Menu()
 
 
+# Function for opening a popup window for the user based the value it receives, which is based off of the button the
+# user presses
 def show_popup(instance):
     popupWindow = Popup(title="Result", content=instance)
     popupWindow.open()
 
 
+# Function for reading and cleaning the dataset, as well as extracting additional data from said dataset
 def csv_loader():
     # CSV file gets read
     csv_data = pd.read_csv("books.csv", error_bad_lines=False, encoding="utf-8")
@@ -99,6 +110,7 @@ def csv_loader():
     return csv_data
 
 
+# Function for creating triples in a knowledge graph
 def triples(csv_data):
     g = Graph()
     g.parse("https://www.wikidata.org/wiki/Q571", format="xml")
@@ -120,7 +132,7 @@ def triples(csv_data):
         g.add((URIRef(schema + subject), RDF.type, OWL.DatatypeProperty))
         g.add((URIRef(schema + subject), URIRef(schema + "identifier"), Literal(row["isbn13"], datatype=XSD.int)))
         g.add((URIRef(schema + subject), URIRef(schema + "author"), URIRef(schema + row["authors"], datatype=XSD.string)))
-        g.add((URIRef(schema + subject), URIRef(schema + "aggregateRating"), Literal(row["average_rating"], datatype=XSD.float)))
+        g.add((URIRef(schema + subject), URIRef(schema + "aggregateRating"),Literal(row["average_rating"], datatype=XSD.float)))
         g.add((URIRef(schema + subject), URIRef(schema + "inLanguage"), Literal(schema, lang=row["language_code"])))
         g.add((URIRef(schema + subject), URIRef(schema + "numberOfPages"), Literal(row["num_pages"], datatype=XSD.int)))
         g.add((URIRef(schema + subject), URIRef(schema + "datePublished"), Literal(row["publication_date"], datatype=XSD["date"])))
@@ -134,16 +146,17 @@ def triples(csv_data):
 
     g.remove((None, None, URIRef("https://schema.org/unknown")))
 
-    # print(g.serialize(format="turtle").decode("utf-8"))
     return g.serialize(destination='output.owl', format='turtle')
-    # print(g.serialize(format="turtle").decode())
 
 
+# Function that gives you a random book from our dataset, and information about it
 def random_book(data):
     num = random.randint(1, (len(data) + 1))
     return data.iloc[num]
 
 
+# Function that lets you search for an author and returns all the books they have written, as well as
+# information about them
 def author_search(data, author):
     search = author.lower()
     search = search.replace(' ', '_')
@@ -168,6 +181,8 @@ def author_search(data, author):
     return results
 
 
+# Function that lets you search for a book and returns all books that has the search words in its title,
+# and information about them
 def book_search(data, author):
     search = author
     search = search.replace(' ', '_')
@@ -195,7 +210,7 @@ def book_search(data, author):
 def sparql():
     sparql = SPARQLWrapper("https://query.wikidata.org/sparql")
 
-    # Spørring som henter alle bøkene som en forfatter (her: J.K. Rowling) har skrevet
+    # Query that extracts all the books that a certain author has written (here: J.K. Rowling)
     sparql.setQuery("""
     select ?book ?bookLabel where
     { ?book wdt:P50 wd:Q34660.
@@ -210,7 +225,7 @@ def sparql():
     for result in results["results"]["bindings"]:
         print(result["book"]["value"], "   ", result["bookLabel"]["value"])
 
-    # Spørring som henter sjangrene til en bok eller en serie av bøker (her: Harry Potter), siden datasettet vårt ikke inkluderer sjangre
+    # Query that extracts all the genres of a book or a series of books (here: Harry Potter)
     sparql.setQuery("""
     select ?genre ?genreLabel where
     { wd:Q43361 wdt:P136 ?genre.
@@ -225,7 +240,7 @@ def sparql():
     for result in results["results"]["bindings"]:
         print(result["genre"]["value"], "   ", result["genreLabel"]["value"])
 
-    # Spørring som finner 10 bøker som har samme sjanger som en bok eller serie (her: Harry Potter)
+    # Query that finds 10 books that has the same genre as a book or a series of books (here: Harry Potter)
     sparql.setQuery("""
     select ?book ?bookLabel where
     { wd:Q43361 wdt:P136 ?genre.
@@ -240,7 +255,8 @@ def sparql():
     for result in results["results"]["bindings"]:
         print(result["book"]["value"], "   ", result["bookLabel"]["value"])
 
-    # Spørring som henter alle bøker av en bestemt forfatter, som har samme sjanger som en bestemt forfatter (her: Harry Potter og J.K. Rowling)
+    # Query that extracts all books from a certain author, that has the same genre as a book or a series written by
+    # the same author (here: Harry Potter and J.K. Rowling)
     sparql.setQuery("""
     select distinct ?book ?bookLabel where
     { wd:Q43361 wdt:P136 ?genre.
@@ -258,6 +274,5 @@ def sparql():
 
 
 if __name__ == '__main__':
-    #triples(csv_loader())
     sparql()
     MyApp().run()
